@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { BadRequestError } from '../errors/bad-request-error';
+import jwt from 'jsonwebtoken';
 
+import { BadRequestError } from '../errors/bad-request-error';
 import { RequestValidationError } from '../errors/request-validation-error';
 import { User } from '../models/user';
 
@@ -25,7 +26,6 @@ async (req: Request, res: Response) => {
   }
 
   const { email, password } = req.body;
-
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
@@ -35,6 +35,15 @@ async (req: Request, res: Response) => {
   const user = User.build({ email, password });
 
   await user.save();
+
+  const userJwt = jwt.sign({
+    id: user.id,
+    email: user.email,
+  }, process.env.JWT_KEY!);
+
+  req.session = {
+    jwt: userJwt,
+  };
 
   return res.status(201).json(user);
 });
